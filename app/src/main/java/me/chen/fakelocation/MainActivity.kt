@@ -2,24 +2,26 @@ package me.chen.fakelocation
 
 import android.os.Bundle
 import android.os.PersistableBundle
-import android.support.design.widget.Snackbar
 import android.support.design.widget.NavigationView
+import android.support.design.widget.Snackbar
 import android.support.v4.view.GravityCompat
 import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AppCompatActivity
 import android.view.MenuItem
 import com.amap.api.location.AMapLocation
-import com.amap.api.maps.MapView
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.app_bar_main.*
 import com.amap.api.location.AMapLocationClient
 import com.amap.api.location.AMapLocationClientOption
 import com.amap.api.location.AMapLocationListener
-import kotlinx.android.synthetic.main.content_main.*
+import com.amap.api.maps.LocationSource
+import com.amap.api.maps.MapView
+import com.amap.api.maps.UiSettings
+import com.amap.api.maps.model.MyLocationStyle
+import com.amap.api.maps.model.MyLocationStyle.LOCATION_TYPE_LOCATE
+import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.app_bar_main.*
 
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, AMapLocationListener {
-
 
     private lateinit var mMapView: MapView
     var mLocationClient: AMapLocationClient? = null
@@ -31,6 +33,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun initLocation() {
+        val aMap = mMapView.map;
+        val uiSettings: UiSettings = aMap.uiSettings;
+        uiSettings.isMyLocationButtonEnabled = true
+        aMap.isMyLocationEnabled = true
+        val locationStyle = MyLocationStyle()
+        locationStyle.myLocationType(LOCATION_TYPE_LOCATE)
+        aMap.myLocationStyle = locationStyle
         mLocationClient = AMapLocationClient(applicationContext)
         val locationOption = AMapLocationClientOption()
         locationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy)
