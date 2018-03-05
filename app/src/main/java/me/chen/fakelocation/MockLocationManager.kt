@@ -64,10 +64,10 @@ class MockLocationManager private constructor(var context: Context) {
             val mockLocation = Location(providerStr)
             mockLocation.setLatitude(latitude)
             mockLocation.setLongitude(longitude)
-            mockLocation.setAltitude(0)    // 高程（米）
-            mockLocation.setBearing(0)   // 方向（度）
-            mockLocation.setSpeed(0)    //速度（米/秒）
-            mockLocation.setAccuracy(2)   // 精度（米）
+            mockLocation.setAltitude(0.0)    // 高程（米）
+            mockLocation.setBearing(0F)   // 方向（度）
+            mockLocation.setSpeed(0F)    //速度（米/秒）
+            mockLocation.setAccuracy(2F)   // 精度（米）
             mockLocation.setTime(System.currentTimeMillis())   // 本地时间
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
                 //api 16以上的需要加上这一句才能模拟定位 , 也就是targetSdkVersion > 16
