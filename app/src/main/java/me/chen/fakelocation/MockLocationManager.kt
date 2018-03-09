@@ -62,13 +62,13 @@ class MockLocationManager private constructor(var context: Context) {
         try {
             val providerStr = LocationManager.GPS_PROVIDER
             val mockLocation = Location(providerStr)
-            mockLocation.setLatitude(latitude)
-            mockLocation.setLongitude(longitude)
-            mockLocation.setAltitude(0.0)    // 高程（米）
-            mockLocation.setBearing(0F)   // 方向（度）
-            mockLocation.setSpeed(0F)    //速度（米/秒）
-            mockLocation.setAccuracy(2F)   // 精度（米）
-            mockLocation.setTime(System.currentTimeMillis())   // 本地时间
+            mockLocation.latitude = latitude
+            mockLocation.longitude = longitude
+            mockLocation.altitude = 0.0    // 高程（米）
+            mockLocation.bearing = 0F   // 方向（度）
+            mockLocation.speed = 0F    //速度（米/秒）
+            mockLocation.accuracy = 2F   // 精度（米）
+            mockLocation.time = System.currentTimeMillis()   // 本地时间
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
                 //api 16以上的需要加上这一句才能模拟定位 , 也就是targetSdkVersion > 16
                 mockLocation.setElapsedRealtimeNanos(SystemClock.elapsedRealtimeNanos())
