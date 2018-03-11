@@ -1,79 +1,146 @@
 package me.chen.fakelocation
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.PersistableBundle
 import android.support.design.widget.NavigationView
-import android.support.design.widget.Snackbar
+import android.support.v4.app.ActivityCompat
+import android.support.v4.content.ContextCompat
 import android.support.v4.view.GravityCompat
 import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.widget.LinearLayoutManager
+import android.support.v7.widget.RecyclerView
+import android.support.v7.widget.SearchView
+import android.view.Menu
 import android.view.MenuItem
-import com.amap.api.location.AMapLocation
-import com.amap.api.location.AMapLocationClient
-import com.amap.api.location.AMapLocationClientOption
-import com.amap.api.location.AMapLocationListener
-import com.amap.api.maps.LocationSource
+import android.view.View
+import com.amap.api.maps.AMap
+import com.amap.api.maps.CameraUpdateFactory
 import com.amap.api.maps.MapView
 import com.amap.api.maps.UiSettings
+import com.amap.api.maps.model.BitmapDescriptorFactory
+import com.amap.api.maps.model.LatLng
+import com.amap.api.maps.model.MarkerOptions
 import com.amap.api.maps.model.MyLocationStyle
-import com.amap.api.maps.model.MyLocationStyle.LOCATION_TYPE_LOCATE
+import com.amap.api.services.core.PoiItem
+import com.amap.api.services.poisearch.PoiResult
+import com.amap.api.services.poisearch.PoiSearch
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
 
 
-class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, AMapLocationListener {
+const val WRITE_COARSE_LOCATION_REQUEST_CODE = 100
 
+class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, PoiSearch.OnPoiSearchListener, PoiSearchAdapter.OnItemClick, AMap.OnMapClickListener {
+    private lateinit var mMockLocationManager: MockLocationManager;
     private lateinit var mMapView: MapView
-    var mLocationClient: AMapLocationClient? = null
+    private lateinit var mSearchView: SearchView
+    private lateinit var mPoiRecyclerView: RecyclerView
+    private lateinit var mPoiList: ArrayList<PoiItem>
+    private lateinit var mAdapter: PoiSearchAdapter
+    private lateinit var mAMap: AMap
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         initView(savedInstanceState)
+        checkPermission()
         initLocation()
     }
 
-    private fun initLocation() {
-        val aMap = mMapView.map;
-        val uiSettings: UiSettings = aMap.uiSettings;
-        uiSettings.isMyLocationButtonEnabled = true
-        aMap.isMyLocationEnabled = true
-        val locationStyle = MyLocationStyle()
-        locationStyle.myLocationType(LOCATION_TYPE_LOCATE)
-        aMap.myLocationStyle = locationStyle
-        mLocationClient = AMapLocationClient(applicationContext)
-        val locationOption = AMapLocationClientOption()
-        locationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy)
-        locationOption.setOnceLocation(true)
-        mLocationClient!!.setLocationListener(this)
-        mLocationClient!!.startLocation()
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.activity_main_menu, menu)
+        val searchItem = menu!!.findItem(R.id.menu_search)
+        mSearchView = searchItem.actionView as SearchView
+        mSearchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                if (query != null) {
+                    search(query)
+                }
+                return true
+
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                return true
+            }
+        })
+
+        return super.onCreateOptionsMenu(menu)
 
     }
 
-    override fun onLocationChanged(amapLocation: AMapLocation?) {
-        if (amapLocation != null) {
-            if (amapLocation.getErrorCode() == 0) {
-                //定位成功回调信息，设置相关消息
-                amapLocation.getLocationType();//获取当前定位结果来源，如网络定位结果，详见定位类型表
-                amapLocation.getLatitude();//获取纬度
-                amapLocation.getLongitude();//获取经度
-                amapLocation.getAccuracy();//获取精度信息
-            } else {
-                //显示错误信息ErrCode是错误码，errInfo是错误信息，详见错误码表。
-                Logger.log("AmapError", "location Error, ErrCode:"
-                        + amapLocation.getErrorCode() + ", errInfo:"
-                        + amapLocation.getErrorInfo());
-            }
+    private fun checkPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+                != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.READ_PHONE_STATE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                    WRITE_COARSE_LOCATION_REQUEST_CODE);//自定义的code
         }
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == WRITE_COARSE_LOCATION_REQUEST_CODE) {
+        }
+    }
+
+    private fun search(word: String) {
+        val poiSearchQuery = PoiSearch.Query(word, "", null);
+        poiSearchQuery.pageNum = 0
+        poiSearchQuery.pageSize = 10
+        val poiSearch = PoiSearch(this, poiSearchQuery)
+        poiSearch.setOnPoiSearchListener(this)
+        poiSearch.searchPOIAsyn()
+    }
+
+    override fun onPoiItemSearched(p0: PoiItem?, p1: Int) {
+    }
+
+    override fun onPoiSearched(p0: PoiResult?, p1: Int) {
+        if (p0 != null && p0.pois.size > 0) {
+            mPoiRecyclerView.visibility = View.VISIBLE
+            mPoiList.addAll(p0.pois)
+            mAdapter.notifyDataSetChanged()
+        }
+    }
+
+
+    private fun initLocation() {
+        mMockLocationManager = MockLocationManager.getInstance(this)
+        mAMap = mMapView.map;
+        mAMap.setOnMapClickListener(this)
+        val uiSettings: UiSettings = mAMap.uiSettings
+        uiSettings.isMyLocationButtonEnabled = true
+        mAMap.isMyLocationEnabled = true
+        val locationStyle = MyLocationStyle()
+        locationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
+        mAMap.myLocationStyle = locationStyle
+    }
+
+
     private fun initView(savedInstanceState: Bundle?) {
+
+        mPoiList = ArrayList();
+        mPoiRecyclerView = findViewById(R.id.list)
+        mPoiRecyclerView.visibility = View.GONE
+        mPoiRecyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
+        mAdapter = PoiSearchAdapter(mPoiList, this)
+        mPoiRecyclerView.adapter = mAdapter;
         mMapView = findViewById(R.id.map);
         mMapView.onCreate(savedInstanceState)
         setSupportActionBar(toolbar)
 
         fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show()
+            if (mMockLocationManager.mState == STATE_RUNNING) {
+                fab.setImageResource(R.drawable.vector_drawable_start_btn)
+                mMockLocationManager.stop()
+            } else {
+                fab.setImageResource(R.drawable.vector_drawable_stop_btn)
+                mMockLocationManager.start()
+            }
         }
 
         val toggle = ActionBarDrawerToggle(
@@ -118,15 +185,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.nav_camera -> {
                 // Handle the camera action
             }
-            R.id.nav_gallery -> {
-
-            }
-            R.id.nav_slideshow -> {
-
-            }
-            R.id.nav_manage -> {
-
-            }
             R.id.nav_share -> {
 
             }
@@ -137,5 +195,38 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         drawer_layout.closeDrawer(GravityCompat.START)
         return true
+    }
+
+    override fun onItemClick(poiItem: PoiItem) {
+        mPoiRecyclerView.visibility = View.GONE
+        setMarkerOptions(poiItem.title, poiItem.distance, poiItem.latLonPoint
+                .latitude, poiItem.latLonPoint.longitude);
+    }
+
+    fun setMarkerOptions(title: String?, distance: Int, latitude: Double, longitude: Double) {
+        val mk = MarkerOptions();
+        mk.icon(BitmapDescriptorFactory.defaultMarker());
+        mk.title(title);
+        mk.anchor(1.5f, 3.5f);
+        mk.isFlat = true;
+        val ll = LatLng(latitude, longitude);
+        mk.position(ll);
+        mAMap.clear(true);
+        val cu = CameraUpdateFactory.newLatLng(ll);
+        mAMap.animateCamera(cu);
+        mAMap.addMarker(mk);
+        mMockLocationManager.updateLocation(latitude, longitude)
+    }
+
+    override fun onMapClick(latLng: LatLng) {
+        mAMap.clear()
+        var latitude = latLng.latitude
+        var longtitude = latLng.longitude
+        var markerOptions = MarkerOptions()
+        markerOptions.icon(BitmapDescriptorFactory.defaultMarker());
+        markerOptions.position(latLng)
+        mAMap.addMarker(markerOptions)
+        mAMap.moveCamera(CameraUpdateFactory.changeLatLng(latLng))
+        mMockLocationManager.updateLocation(latitude, longtitude)
     }
 }

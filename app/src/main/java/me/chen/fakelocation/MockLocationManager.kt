@@ -3,22 +3,25 @@ package me.chen.fakelocation
 import android.content.Context
 import android.location.Location
 import android.location.LocationManager
-import android.os.SystemClock
 import android.os.Build
+import android.os.SystemClock
 
 
 /**
  * Created by chenqizheng on 2018/2/9.
  */
+
+const val STATE_RUNNING: Int = 2;
+const val STATE_IDLE: Int = 1;
+
 class MockLocationManager private constructor(var context: Context) {
-    lateinit var mLocationManger: LocationManager;
-    lateinit var mMockThread: Thread;
+
+    var mState = STATE_IDLE
+    var mLocationManger: LocationManager? = null;
+    var mMockThread: Thread? = null;
     var mLatitude: Double = 0.0;
     var mLongitude: Double = 0.0;
     var hasAddTestProvider: Boolean = false;
-
-    enum class State {
-    }
 
     init {
         initMock();
@@ -36,7 +39,8 @@ class MockLocationManager private constructor(var context: Context) {
                     }
                 }
             };
-            mMockThread.start();
+            mMockThread!!.start();
+            mState = STATE_RUNNING;
         }
 
     }
@@ -50,15 +54,17 @@ class MockLocationManager private constructor(var context: Context) {
     fun stop() {
         if (hasAddTestProvider) {
             try {
-                mLocationManger.removeTestProvider(LocationManager.GPS_PROVIDER)
+                mLocationManger!!.removeTestProvider(LocationManager.GPS_PROVIDER)
             } catch (ex: Exception) {
                 // 若未成功addTestProvider，或者系统模拟位置已关闭则必然会出错
             }
             hasAddTestProvider = false
         }
+        mState = STATE_IDLE
     }
 
     private fun setLocation(latitude: Double, longitude: Double) {
+
         try {
             val providerStr = LocationManager.GPS_PROVIDER
             val mockLocation = Location(providerStr)
@@ -73,21 +79,23 @@ class MockLocationManager private constructor(var context: Context) {
                 //api 16以上的需要加上这一句才能模拟定位 , 也就是targetSdkVersion > 16
                 mockLocation.setElapsedRealtimeNanos(SystemClock.elapsedRealtimeNanos())
             }
-            mLocationManger.setTestProviderLocation(providerStr, mockLocation)
+            mLocationManger!!.setTestProviderLocation(providerStr, mockLocation)
         } catch (e: Exception) {
             // 防止用户在软件运行过程中关闭模拟位置或选择其他应用
             stop()
             throw e
+        } finally {
+            hasAddTestProvider = true
         }
 
     }
 
     private fun initMock() {
         mLocationManger = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
-        if (mLocationManger.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+        if (mLocationManger!!.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             try {
-                mLocationManger.addTestProvider(LocationManager.GPS_PROVIDER, false, false, false, false, true, true, true, 0, 5)
-                mLocationManger.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true)
+                mLocationManger!!.addTestProvider(LocationManager.GPS_PROVIDER, false, false, false, false, true, true, true, 0, 5)
+                mLocationManger!!.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -97,7 +105,7 @@ class MockLocationManager private constructor(var context: Context) {
 
     companion object {
         @Volatile
-        lateinit var instance: MockLocationManager;
+        var instance: MockLocationManager? = null;
 
         fun getInstance(context: Context): MockLocationManager {
             if (instance == null) {
@@ -107,7 +115,7 @@ class MockLocationManager private constructor(var context: Context) {
                     }
                 }
             }
-            return instance;
+            return instance!!
         }
     }
 
