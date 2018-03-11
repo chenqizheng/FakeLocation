@@ -4,18 +4,23 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.PersistableBundle
+import android.provider.Settings
 import android.support.design.widget.NavigationView
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v4.view.GravityCompat
 import android.support.v7.app.ActionBarDrawerToggle
+import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.support.v7.widget.SearchView
+import android.text.method.LinkMovementMethod
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.TextView
 import com.amap.api.maps.AMap
 import com.amap.api.maps.CameraUpdateFactory
 import com.amap.api.maps.MapView
@@ -47,6 +52,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         initView(savedInstanceState)
         checkPermission()
         initLocation()
+        Log.i("test", "mock location =" + Settings.Secure.getInt(getContentResolver(), "mock_location", 0));
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -118,6 +124,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val locationStyle = MyLocationStyle()
         locationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
         mAMap.myLocationStyle = locationStyle
+
     }
 
 
@@ -180,21 +187,30 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        // Handle navigation view item clicks here.
         when (item.itemId) {
-            R.id.nav_camera -> {
-                // Handle the camera action
+            R.id.nav_about -> {
+                showAboutDialog()
             }
-            R.id.nav_share -> {
-
+            R.id.nav_map -> {
+                mAMap.mapType = AMap.MAP_TYPE_NORMAL
             }
-            R.id.nav_send -> {
+            R.id.nav_satellite -> {
+                mAMap.mapType = AMap.MAP_TYPE_SATELLITE
 
             }
         }
 
         drawer_layout.closeDrawer(GravityCompat.START)
         return true
+    }
+
+    private fun showAboutDialog() {
+        var alertDialogBuild = AlertDialog.Builder(this)
+        alertDialogBuild.setTitle(R.string.nav_about)
+        alertDialogBuild.setMessage(R.string.about_message)
+        val alertDialog: AlertDialog = alertDialogBuild.create()
+        alertDialog.show()
+        alertDialog.findViewById<TextView>(android.R.id.message)!!.movementMethod = LinkMovementMethod.getInstance();
     }
 
     override fun onItemClick(poiItem: PoiItem) {

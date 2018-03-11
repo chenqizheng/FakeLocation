@@ -5,4 +5,10 @@
     <string name="navigation_drawer_open">Open</string>
     <string name="navigation_drawer_close">Close</string>
 
+    <string name="nav_history">历史记录</string>
+    <string name="nav_map_type">地图类型</string>
+    <string name="nav_map">基本</string>
+    <string name="nav_satellite">卫星</string>
+    <string name="nav_about">关于</string>
+    <string name="about_message">虚拟定位软件，有功能需求可能发邮件<a href="mailto:qizhengchenbeijing@gmail.com">qizhengchenbeijing@gmail.com</a>，谢谢</string>
 </resources>
