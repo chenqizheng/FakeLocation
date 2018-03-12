@@ -11,4 +11,7 @@
     <string name="nav_satellite">卫星</string>
     <string name="nav_about">关于</string>
     <string name="about_message">虚拟定位软件，有功能需求可能发邮件<a href="mailto:qizhengchenbeijing@gmail.com">qizhengchenbeijing@gmail.com</a>，谢谢</string>
+    <string name="open_dev_setting_title">开启失败</string>
+    <string name="open_dev_setting_msg">开启失败，请在开发者选项中打开模拟定位，并选择这个软件。</string>
+    <string name="open_dev_setting_sure">确定</string>
 </resources>

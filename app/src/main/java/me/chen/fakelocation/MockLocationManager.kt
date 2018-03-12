@@ -13,15 +13,17 @@ import android.os.SystemClock
 
 const val STATE_RUNNING: Int = 2;
 const val STATE_IDLE: Int = 1;
+const val TAG = "Fake Location"
 
 class MockLocationManager private constructor(var context: Context) {
 
     var mState = STATE_IDLE
-    var mLocationManger: LocationManager? = null;
-    var mMockThread: Thread? = null;
-    var mLatitude: Double = 0.0;
-    var mLongitude: Double = 0.0;
-    var hasAddTestProvider: Boolean = false;
+    var mLocationManger: LocationManager? = null
+    var mMockThread: Thread? = null
+    var mLatitude: Double = 0.0
+    var mLongitude: Double = 0.0
+    var hasAddTestProvider: Boolean = false
+    var mMockLocationListenter: MockLocationListenter? = null;
 
     init {
         initMock();
@@ -30,19 +32,27 @@ class MockLocationManager private constructor(var context: Context) {
     fun start() {
         if (mMockThread == null) {
             mMockThread = Thread {
-                while (true) {
+                do {
                     try {
-                        Thread.sleep(500);
                         setLocation(mLatitude, mLongitude);
+                        Thread.sleep(500);
                     } catch (e: Exception) {
-
+                        e.printStackTrace()
+                        if (mMockLocationListenter != null) {
+                            mMockLocationListenter!!.onError(e)
+                        }
+                        break
                     }
-                }
-            };
+                } while (true)
+            }
             mMockThread!!.start();
             mState = STATE_RUNNING;
         }
 
+    }
+
+    fun registerListtenter(listenter: MockLocationListenter) {
+        mMockLocationListenter = listenter
     }
 
     fun updateLocation(latitude: Double, longitude: Double) {
@@ -60,6 +70,7 @@ class MockLocationManager private constructor(var context: Context) {
             }
             hasAddTestProvider = false
         }
+        mMockThread = null
         mState = STATE_IDLE
     }
 
@@ -87,7 +98,6 @@ class MockLocationManager private constructor(var context: Context) {
         } finally {
             hasAddTestProvider = true
         }
-
     }
 
     private fun initMock() {
@@ -117,6 +127,10 @@ class MockLocationManager private constructor(var context: Context) {
             }
             return instance!!
         }
+    }
+
+    interface MockLocationListenter {
+        fun onError(e: Exception)
     }
 
 }

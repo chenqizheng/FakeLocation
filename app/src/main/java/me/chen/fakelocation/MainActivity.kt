@@ -1,6 +1,7 @@
 package me.chen.fakelocation
 
 import android.Manifest
+import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.PersistableBundle
@@ -38,7 +39,9 @@ import kotlinx.android.synthetic.main.app_bar_main.*
 
 const val WRITE_COARSE_LOCATION_REQUEST_CODE = 100
 
-class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, PoiSearch.OnPoiSearchListener, PoiSearchAdapter.OnItemClick, AMap.OnMapClickListener {
+class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, PoiSearch.OnPoiSearchListener, PoiSearchAdapter.OnItemClick, AMap.OnMapClickListener, MockLocationManager.MockLocationListenter {
+
+
     private lateinit var mMockLocationManager: MockLocationManager;
     private lateinit var mMapView: MapView
     private lateinit var mSearchView: SearchView
@@ -116,6 +119,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun initLocation() {
         mMockLocationManager = MockLocationManager.getInstance(this)
+        mMockLocationManager.registerListtenter(this)
         mAMap = mMapView.map;
         mAMap.setOnMapClickListener(this)
         val uiSettings: UiSettings = mAMap.uiSettings
@@ -244,5 +248,25 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mAMap.addMarker(markerOptions)
         mAMap.moveCamera(CameraUpdateFactory.changeLatLng(latLng))
         mMockLocationManager.updateLocation(latitude, longtitude)
+    }
+
+    override fun onError(e: Exception) {
+        mMapView.post {
+            fab.setImageResource(R.drawable.vector_drawable_start_btn)
+            if (e is SecurityException) {
+                showGoToDevSettingsDialog()
+            }
+        }
+
+    }
+
+    private fun showGoToDevSettingsDialog() {
+        var build = AlertDialog.Builder(this)
+        build.setTitle(R.string.open_dev_setting_title)
+        build.setMessage(R.string.open_dev_setting_msg)
+        build.setNegativeButton(R.string.open_dev_setting_sure, { dialog, whichButton ->
+            SettingsUtils.openTestGPSProvider(this)
+        })
+        build.create().show()
     }
 }
