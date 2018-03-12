@@ -57,5 +57,6 @@ dependencies {
 
     // Paging
     implementation "android.arch.paging:runtime:1.0.0-alpha6"
+    implementation "android.arch.persistence.room:rxjava2:1.0.0"
 
 }

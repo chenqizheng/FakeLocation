@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.PersistableBundle
-import android.provider.Settings
 import android.support.design.widget.NavigationView
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
@@ -17,7 +16,6 @@ import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.support.v7.widget.SearchView
 import android.text.method.LinkMovementMethod
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -36,8 +34,10 @@ import com.amap.api.services.core.PoiItem
 import com.amap.api.services.core.SuggestionCity
 import com.amap.api.services.poisearch.PoiResult
 import com.amap.api.services.poisearch.PoiSearch
+import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
+import kotlin.collections.ArrayList
 
 
 const val WRITE_COARSE_LOCATION_REQUEST_CODE = 100
@@ -49,11 +49,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var mMapView: MapView
     private lateinit var mSearchView: SearchView
     private lateinit var mRecyclerView: RecyclerView
-    private lateinit var mPoiList: ArrayList<PoiItem>
-    private lateinit var mAdapter: PoiSearchAdapter
     private lateinit var mAMap: AMap
     private var mCity: String = ""
     private var mWord: String = ""
+    private lateinit var mAppDatabase: AppDatabase
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -119,9 +118,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (p0 != null && p0.searchSuggestionCitys.size > 0) {
             showSuggestionCitysDialog(p0.searchSuggestionCitys)
         } else if (p0 != null && p0.pois.size > 0) {
+            var mAdapter = PoiSearchAdapter(p0.pois, this)
+            mRecyclerView.adapter = mAdapter;
             mRecyclerView.visibility = View.VISIBLE
-            mPoiList.addAll(p0.pois)
-            mAdapter.notifyDataSetChanged()
         }
     }
 
@@ -160,15 +159,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
 
     private fun initView(savedInstanceState: Bundle?) {
-
+        mAppDatabase = (application as App).mAppDatabase
         var navigationView = findViewById<NavigationView>(R.id.nav_view)
         navigationView.setCheckedItem(R.id.nav_map)
-        mPoiList = ArrayList();
         mRecyclerView = findViewById(R.id.list)
         mRecyclerView.visibility = View.GONE
         mRecyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
-        mAdapter = PoiSearchAdapter(mPoiList, this)
-        mRecyclerView.adapter = mAdapter;
         mMapView = findViewById(R.id.map);
         mMapView.onCreate(savedInstanceState)
         setSupportActionBar(toolbar)
@@ -225,16 +221,39 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 showAboutDialog()
             }
             R.id.nav_map -> {
+                mRecyclerView.visibility = View.GONE
                 mAMap.mapType = AMap.MAP_TYPE_NORMAL
             }
             R.id.nav_satellite -> {
+                mRecyclerView.visibility = View.GONE
                 mAMap.mapType = AMap.MAP_TYPE_SATELLITE
 
+            }
+            R.id.nav_history -> {
+                showHistoryyList()
             }
         }
 
         drawer_layout.closeDrawer(GravityCompat.START)
         return true
+    }
+
+    private fun showHistoryyList() {
+        Schedulers.io().scheduleDirect({
+            var list = mAppDatabase.searchHistoryDAO.loadAll().toList()
+            mRecyclerView.post {
+                mRecyclerView.visibility = View.VISIBLE
+                var adapter = SearchHistroyAdapter(list, object : SearchHistroyAdapter.OnItemClick {
+                    override fun onItemClick(item: SearchHistory) {
+                        mRecyclerView.visibility = View.GONE
+                        setMarkerOptions(item.name, item.lat, item.lng)
+                    }
+
+                })
+                mRecyclerView.adapter = adapter;
+            }
+
+        })
     }
 
     private fun showAboutDialog() {
@@ -248,11 +267,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onItemClick(poiItem: PoiItem) {
         mRecyclerView.visibility = View.GONE
-        setMarkerOptions(poiItem.title, poiItem.distance, poiItem.latLonPoint
+        Schedulers.io().scheduleDirect({
+            mAppDatabase.searchHistoryDAO.insertHistorys(SearchHistory(poiItem.title, "", poiItem.latLonPoint.latitude, poiItem.latLonPoint.longitude))
+        })
+
+        setMarkerOptions(poiItem.title, poiItem.latLonPoint
                 .latitude, poiItem.latLonPoint.longitude);
+        mCity = ""
     }
 
-    fun setMarkerOptions(title: String?, distance: Int, latitude: Double, longitude: Double) {
+    fun setMarkerOptions(title: String?, latitude: Double, longitude: Double) {
         val mk = MarkerOptions();
         mk.icon(BitmapDescriptorFactory.defaultMarker());
         mk.title(title);

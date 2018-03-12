@@ -1,30 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-      xmlns:tools="http://schemas.android.com/tools"
-      tools:showIn="navigation_view">
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
 
     <item android:title="@string/nav_map_type">
         <group android:checkableBehavior="single">
             <item
                 android:id="@+id/nav_map"
                 android:icon="@drawable/vector_drawable_map"
-                android:title="@string/nav_map"/>
+                android:title="@string/nav_map" />
             <item
                 android:id="@+id/nav_satellite"
                 android:icon="@drawable/vector_drawable_satellite"
-                android:title="@string/nav_satellite"/>
+                android:title="@string/nav_satellite" />
         </group>
     </item>
     <group>
-        <!--<item-->
-            <!--android:id="@+id/nav_history"-->
-            <!--android:icon="@drawable/vector_drawable_history_button"-->
-            <!--android:title="@string/nav_history"/>-->
-
+        <item
+            android:id="@+id/nav_history"
+            android:icon="@drawable/vector_drawable_history_button"
+            android:title="@string/nav_history" />
         <item
             android:id="@+id/nav_about"
             android:icon="@drawable/vector_drawable_info"
-            android:title="@string/nav_about"/>
+            android:title="@string/nav_about" />
     </group>
 
 
