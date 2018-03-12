@@ -1,7 +1,7 @@
 package me.chen.fakelocation
 
 import android.Manifest
-import android.content.DialogInterface
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.PersistableBundle
@@ -21,6 +21,8 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.inputmethod.InputMethodManager
+import android.widget.ArrayAdapter
 import android.widget.TextView
 import com.amap.api.maps.AMap
 import com.amap.api.maps.CameraUpdateFactory
@@ -31,6 +33,7 @@ import com.amap.api.maps.model.LatLng
 import com.amap.api.maps.model.MarkerOptions
 import com.amap.api.maps.model.MyLocationStyle
 import com.amap.api.services.core.PoiItem
+import com.amap.api.services.core.SuggestionCity
 import com.amap.api.services.poisearch.PoiResult
 import com.amap.api.services.poisearch.PoiSearch
 import kotlinx.android.synthetic.main.activity_main.*
@@ -45,17 +48,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var mMockLocationManager: MockLocationManager;
     private lateinit var mMapView: MapView
     private lateinit var mSearchView: SearchView
-    private lateinit var mPoiRecyclerView: RecyclerView
+    private lateinit var mRecyclerView: RecyclerView
     private lateinit var mPoiList: ArrayList<PoiItem>
     private lateinit var mAdapter: PoiSearchAdapter
     private lateinit var mAMap: AMap
+    private var mCity: String = ""
+    private var mWord: String = ""
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         initView(savedInstanceState)
         checkPermission()
         initLocation()
-        Log.i("test", "mock location =" + Settings.Secure.getInt(getContentResolver(), "mock_location", 0));
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -65,7 +69,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mSearchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 if (query != null) {
-                    search(query)
+                    search(query, mCity)
+                    hideSoftInput()
                 }
                 return true
 
@@ -96,8 +101,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    private fun search(word: String) {
-        val poiSearchQuery = PoiSearch.Query(word, "", null);
+    private fun search(word: String, city: String) {
+        mWord = word
+        mCity = city
+        val poiSearchQuery = PoiSearch.Query(word, "", city);
         poiSearchQuery.pageNum = 0
         poiSearchQuery.pageSize = 10
         val poiSearch = PoiSearch(this, poiSearchQuery)
@@ -109,17 +116,37 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun onPoiSearched(p0: PoiResult?, p1: Int) {
-        if (p0 != null && p0.pois.size > 0) {
-            mPoiRecyclerView.visibility = View.VISIBLE
+        if (p0 != null && p0.searchSuggestionCitys.size > 0) {
+            showSuggestionCitysDialog(p0.searchSuggestionCitys)
+        } else if (p0 != null && p0.pois.size > 0) {
+            mRecyclerView.visibility = View.VISIBLE
             mPoiList.addAll(p0.pois)
             mAdapter.notifyDataSetChanged()
         }
     }
 
+    private fun showSuggestionCitysDialog(citys: MutableList<SuggestionCity>) {
+        var build = AlertDialog.Builder(this)
+        build.setTitle(R.string.dialog_show_suggestion_city)
+        var adapter = ArrayAdapter<String>(this, android.R.layout.select_dialog_singlechoice)
+        adapter.addAll(citys.map { it.cityName })
+        build.setAdapter(adapter, { dialog, which ->
+            mCity = citys[which].cityCode
+            search(mWord, mCity)
+            dialog.dismiss()
+        })
+        build.create().show()
+
+    }
+
+    private fun hideSoftInput() {
+        (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(this.getCurrentFocus().getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS)
+    }
 
     private fun initLocation() {
         mMockLocationManager = MockLocationManager.getInstance(this)
         mMockLocationManager.registerListtenter(this)
+        mMockLocationManager.initMock()
         mAMap = mMapView.map;
         mAMap.setOnMapClickListener(this)
         val uiSettings: UiSettings = mAMap.uiSettings
@@ -134,12 +161,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun initView(savedInstanceState: Bundle?) {
 
+        var navigationView = findViewById<NavigationView>(R.id.nav_view)
+        navigationView.setCheckedItem(R.id.nav_map)
         mPoiList = ArrayList();
-        mPoiRecyclerView = findViewById(R.id.list)
-        mPoiRecyclerView.visibility = View.GONE
-        mPoiRecyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
+        mRecyclerView = findViewById(R.id.list)
+        mRecyclerView.visibility = View.GONE
+        mRecyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
         mAdapter = PoiSearchAdapter(mPoiList, this)
-        mPoiRecyclerView.adapter = mAdapter;
+        mRecyclerView.adapter = mAdapter;
         mMapView = findViewById(R.id.map);
         mMapView.onCreate(savedInstanceState)
         setSupportActionBar(toolbar)
@@ -218,7 +247,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun onItemClick(poiItem: PoiItem) {
-        mPoiRecyclerView.visibility = View.GONE
+        mRecyclerView.visibility = View.GONE
         setMarkerOptions(poiItem.title, poiItem.distance, poiItem.latLonPoint
                 .latitude, poiItem.latLonPoint.longitude);
     }
@@ -227,7 +256,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val mk = MarkerOptions();
         mk.icon(BitmapDescriptorFactory.defaultMarker());
         mk.title(title);
-        mk.anchor(1.5f, 3.5f);
         mk.isFlat = true;
         val ll = LatLng(latitude, longitude);
         mk.position(ll);

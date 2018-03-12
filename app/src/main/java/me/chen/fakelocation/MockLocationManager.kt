@@ -25,10 +25,6 @@ class MockLocationManager private constructor(var context: Context) {
     var hasAddTestProvider: Boolean = false
     var mMockLocationListenter: MockLocationListenter? = null;
 
-    init {
-        initMock();
-    }
-
     fun start() {
         if (mMockThread == null) {
             mMockThread = Thread {
@@ -100,14 +96,16 @@ class MockLocationManager private constructor(var context: Context) {
         }
     }
 
-    private fun initMock() {
+    fun initMock() {
         mLocationManger = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
         if (mLocationManger!!.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             try {
                 mLocationManger!!.addTestProvider(LocationManager.GPS_PROVIDER, false, false, false, false, true, true, true, 0, 5)
                 mLocationManger!!.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true)
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (mMockLocationListenter != null) {
+                    mMockLocationListenter!!.onError(e)
+                }
             }
 
         }

@@ -14,4 +14,5 @@
     <string name="open_dev_setting_title">开启失败</string>
     <string name="open_dev_setting_msg">开启失败，请在开发者选项中打开模拟定位，并选择这个软件。</string>
     <string name="open_dev_setting_sure">确定</string>
+    <string name="dialog_show_suggestion_city">选择城市</string>
 </resources>

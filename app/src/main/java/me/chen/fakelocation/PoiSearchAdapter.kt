@@ -12,7 +12,7 @@ import com.amap.api.services.core.PoiItem
  */
 open class PoiSearchAdapter(var poiList: ArrayList<PoiItem>, var callback: OnItemClick) : RecyclerView.Adapter<PoiSearchAdapter.PoiSearchVH>() {
 
-    override fun onBindViewHolder(holder: PoiSearchVH?, position: Int) {
+    override fun onBindViewHolder(holder: PoiSearchVH, position: Int) {
         holder!!.text1.text = poiList[position].title
         holder!!.text2.text = poiList[position].cityName + (poiList[position]).snippet
         holder.itemView.setOnClickListener(object : View.OnClickListener {
@@ -24,7 +24,7 @@ open class PoiSearchAdapter(var poiList: ArrayList<PoiItem>, var callback: OnIte
         })
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup?, viewType: Int): PoiSearchVH {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PoiSearchVH {
         val view = LayoutInflater.from(parent!!.context).inflate(android.R.layout.simple_list_item_2, null);
         return PoiSearchVH(view)
     }
