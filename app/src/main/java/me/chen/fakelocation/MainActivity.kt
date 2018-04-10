@@ -175,6 +175,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 mMockLocationManager.stop()
             } else {
                 fab.setImageResource(R.drawable.vector_drawable_stop_btn)
+                mMockLocationManager.initMock()
                 mMockLocationManager.start()
             }
         }
